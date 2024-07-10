@@ -26,3 +26,8 @@ updates:
           - "semantic-release*"
           - "@semantic-release/*"
       
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
