@@ -1,40 +1,49 @@
-import { StatementCoverageReport } from '../types/JsonFinal';
+import type { StatementCoverageReport } from "../types/JsonFinal";
 
 type LineRange = {
-  start: number,
-  end: number
+	start: number;
+	end: number;
 };
 
-const getUncoveredLinesFromStatements = ({ s, statementMap }: StatementCoverageReport): LineRange[] => {
-  const keys = Object.keys(statementMap);
-  
-  const uncoveredLineRanges = keys.reduce<LineRange[]>((acc, key) => {
-    if(s[key] === 0) {
-      const lastRange = acc.at(-1);
+const getUncoveredLinesFromStatements = ({
+	s,
+	statementMap,
+}: StatementCoverageReport): LineRange[] => {
+	const keys = Object.keys(statementMap);
 
-      if(lastRange && lastRange.end === statementMap[key].start.line - 1) {
-         lastRange.end = statementMap[key].end.line;
-         return acc;
-      }
-      
-      return [
-        ...acc, 
-        {
-          start: statementMap[key].start.line,
-          end: statementMap[key].end.line
-        }
-    ]
-    }
-    return acc;
-  }, [])
+	const uncoveredLineRanges: LineRange[] = [];
+	let currentRange: LineRange | undefined = undefined;
+	for (const key of keys) {
+		if (s[key] > 0) {
+			// If the statement is covered, we need to close the current range.
+			if (currentRange) {
+				uncoveredLineRanges.push(currentRange);
+				currentRange = undefined;
+			}
+			// Besides that, we can just ignore covered lines
+			continue;
+		}
 
-  return uncoveredLineRanges;
-}
+		// Start a new range if we don't have one yet.
+		if (!currentRange) {
+			currentRange = {
+				start: statementMap[key].start.line,
+				end: statementMap[key].end.line,
+			};
+			continue;
+		}
 
-export {
-  getUncoveredLinesFromStatements
+		currentRange.end = statementMap[key].end.line;
+	}
+
+	// If we still have a current range, we need to add it to the uncovered line ranges.
+	if (currentRange) {
+		uncoveredLineRanges.push(currentRange);
+	}
+
+	return uncoveredLineRanges;
 };
 
-export type {
-	LineRange
-};
+export { getUncoveredLinesFromStatements };
+
+export type { LineRange };
