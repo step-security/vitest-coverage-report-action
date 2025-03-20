@@ -4,10 +4,9 @@ export default defineConfig({
 	test: {
 		coverage: {
 			all: true,
-			reporter: ["text", "json-summary"],
+			reporter: ["text", "text-summary", "json-summary", "json"],
 			include: ["src"],
-			exclude: ["src/types"],
-			100: true,
+			exclude: ["src/types", "**/*.test.ts"],
 		},
 	},
 });
