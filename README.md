@@ -6,6 +6,8 @@ This GitHub Action reports [vitest](https://vitest.dev/) coverage results as a G
 
 The action generates a high-level coverage summary for all coverage categories, as well as a detailed, file-based report. The report includes links to the files themselves and the uncovered lines for easy reference.
 
+Want to contribute? Check out the [Contributing Guidelines](./CONTRIBUTING.md).
+
 ## Usage
 
 To use this action, you need to configure `vitest` to create a coverage report with the following reporters:
@@ -75,17 +77,19 @@ This action requires the `pull-request: write` permission to add a comment to yo
 
 ### Options
 
-| Option                      | Description                                                                                                                                                                | Default                                                                       |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `working-directory`         | The main path to search for coverage- and configuration files (adjusting this is especially useful in monorepos).                                                          | `./`                                                                          |
-| `json-summary-path`         | The path to the json summary file.                                                                                                                                         | `${working-directory}/coverage/coverage-summary.json`                         |
-| `json-final-path`           | The path to the json final file.                                                                                                                                           | `${working-directory}/coverage/coverage-final.json`                           |
-| `vite-config-path`          | The path to the vite config file. Will check the same paths as vite and vitest                                                                                             | Checks pattern `${working-directory}/vite[st].{config|workspace}.{t\|mt\|ct\|j\|mj\|cj}s` |
-| `github-token`              | A GitHub access token with permissions to write to issues (defaults to `secrets.GITHUB_TOKEN`).                                                                            | `${{ github.token }}`                                                         |
-| `file-coverage-mode`        | Defines how file-based coverage is reported. Possible values are `all`, `changes` or `none`.                                                                               | `changes`                                                                     |
-| `name`                      | Give the report a custom name. This is useful if you want multiple reports for different test suites within the same PR. Needs to be unique.                               | ''                                                                            |
-| `json-summary-compare-path` | The path to the json summary file to compare against. If given, will display a trend indicator and the difference in the summary. Respects the `working-directory` option. | undefined                                                                     |
-| `pr-number`                 | The number of the PR to post a comment to (if any)                                                                                                                             | If in the context of a PR, the number of that PR.<br/> If in the context of a triggered workflow, the PR of the triggering workflow.                                                                    <br/>If no PR context is found, it defaults to `undefined` |
+| Option                      | Description                                                                                                                                                                                                                                                      | Default                                                                                                                                                                                                                                                            |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `working-directory`         | The main path to search for coverage- and configuration files (adjusting this is especially useful in monorepos).                                                                                                                                                | `./`                                                                                                                                                                                                                                                               |
+| `json-summary-path`         | The path to the json summary file.                                                                                                                                                                                                                               | `${working-directory}/coverage/coverage-summary.json`                                                                                                                                                                                                              |
+| `json-final-path`           | The path to the json final file.                                                                                                                                                                                                                                 | `${working-directory}/coverage/coverage-final.json`                                                                                                                                                                                                                |
+| `json-summary-compare-path` | The path to the json summary file to compare against. If given, will display a trend indicator and the difference in the summary. Respects the `working-directory` option.                                                                                       | undefined                                                                                                                                                                                                                                                          |
+| `vite-config-path`          | The path to the vite config file. Will check the same paths as vite and vitest                                                                                                                                                                                   | Checks pattern `${working-directory}/vite[st].config.{t\|mt\|ct\|j\|mj\|cj}s`                                                                                                                   |
+| `github-token`              | A GitHub access token with permissions to write to issues (defaults to `secrets.GITHUB_TOKEN`).                                                                                                                                                                  | `${{ github.token }}`                                                                                                                                                                                                                                              |
+| `file-coverage-mode`        | Defines how file-based coverage is reported. Possible values are `all`, `changes` or `none`.                                                                                                                                                                     | `changes`                                                                                                                                                                                                                                                          |
+| `file-coverage-root-path`   | The root (or absolute) part of the path used within the json coverage reports to point to the covered files. You can change this if your reports were generated in a different context (e.g., a docker container) and the absolute paths don't match the current runner's workspace. Uses the runner's workspace path by default. | `${{ github.workspace }}`                                                                                                                                                                                                                                          |
+| `name`                      | Give the report a custom name. This is useful if you want multiple reports for different test suites within the same PR. Needs to be unique.                                                                                                                     | ''                                                                                                                                                                                                                                                                 |
+| `pr-number`                 | The number of the PR to post a comment to. When using the `push` trigger, you can set this option to "auto" to make the action automaticaly search of a PR with a matching `sha` value and comment on it.                                                                                                                                                                                                              | If in the context of a PR, the number of that PR.<br/> If in the context of a triggered workflow, the PR of the triggering workflow.                                                                    <br/>If no PR context is found, it defaults to `undefined` |
+| `comment-on`                | Specify where you want a comment to appear: "pr" for pull-request (if one can be found), "commit" for the commit in which context the action was run, or "none" for no comments. You can provide a comma-separated list of "pr" and "commit" to comment on both. | `pr`                                                                                                                                                                                                                                                               |
 
 #### File Coverage Mode
 
@@ -165,9 +169,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        branch:
-          - ${{ github.head_ref }}
-          - "main"
+        include:
+          - branch: main
+            artifact: main
+          - branch: ${{ github.head_ref }}
+            artifact: pull-request
 
     permissions:
       # Required to checkout the code
@@ -177,6 +183,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ matrix.branch }}
+          ## Set repository to correctly checkout from forks
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
       - name: "Install Node"
         uses: actions/setup-node@v4
         with:
@@ -188,7 +196,7 @@ jobs:
       - name: "Upload Coverage"
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.branch }}
+          name: coverage-${{ matrix.artifact }}
           path: coverage
 
   report-coverage:
@@ -198,7 +206,7 @@ jobs:
       - name: "Download Coverage Artifacts"
         uses: actions/download-artifact@v4
         with:
-          name: coverage-${{ github.head_ref }}
+          name: coverage-pull-request
           path: coverage
       - uses: actions/download-artifact@v4
         with:
