@@ -23,9 +23,13 @@ inputs:
       required: false
       description: 'How to show summary for files coverage. Uses "changes" by default.'
       default: changes
+  file-coverage-root-path:
+      required: false
+      description: 'The root (or absolute) part of the path used within the json coverage reports to point to the covered files. You can change this if your reports were generated in a different context (e.g., a docker container) and the absolute paths don''t match the current runner''s workspace. Uses the runner''s workspace path by default.'
+      default: ${{ github.workspace }}
   working-directory:
       required: false
-      description: 'Custom working directory'
+      description: 'Working directory where to look for the vite config file and the coverage report files. Uses "./" by default.'
       default: ./
   name:
       required: false
@@ -33,8 +37,12 @@ inputs:
       default: ''
   pr-number:
       required: false
-      description: 'An optional, user-defined pull request number.'
+      description: 'An optional, user-defined pull request number to comment on. When using "push" events, use "auto" to try to automatically find a matching PR.'
       default: ''
+  comment-on:
+    required: false
+    description: 'Specify where you want a comment to appear: "pr" for pull-request (if one can be found), "commit" for the commit in which context the action was run, or "none" for no comments. You can provide a comma-separated list of "pr" and "commit" to comment on both. Uses "pr" by default.'
+    default: pr
 runs:
   using: 'node20'
   main: 'dist/index.js'
