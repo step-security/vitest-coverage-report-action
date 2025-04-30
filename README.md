@@ -6,8 +6,6 @@ This GitHub Action reports [vitest](https://vitest.dev/) coverage results as a G
 
 The action generates a high-level coverage summary for all coverage categories, as well as a detailed, file-based report. The report includes links to the files themselves and the uncovered lines for easy reference.
 
-Want to contribute? Check out the [Contributing Guidelines](./CONTRIBUTING.md).
-
 ## Usage
 
 To use this action, you need to configure `vitest` to create a coverage report with the following reporters:
