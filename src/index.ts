@@ -55,7 +55,10 @@ const run = async () => {
 		.addRaw(tableData)
 
 	if (fileCoverageMode !== FileCoverageMode.None) {
-		const pullChanges = await getPullChanges(fileCoverageMode);
+		const pullChanges = await getPullChanges({
+			fileCoverageMode,
+			prNumber: processedPrNumber,
+		});
 		const jsonFinal = await parseVitestJsonFinal(jsonFinalPath);
 		const fileTable = generateFileCoverageHtml({
 			jsonSummary, jsonFinal, fileCoverageMode, pullChanges
