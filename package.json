@@ -8,6 +8,9 @@
     "test": "vitest",
     "test:coverage": "vitest run --coverage.enabled true",
     "test:export": "npx ts-node test/exportTestTable.ts",
+    "lint": "biome check",
+    "lint:write": "biome check --write",
+    "lint:ci": "biome ci",
     "build": "rm -rf dist && node esbuild.cjs",
     "start": "npm run build && node dist/index.js",
     "typecheck": "npx tsc --noEmit"
@@ -21,6 +24,7 @@
     "coverage",
     "nyc"
   ],
+  "author": "step-security",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/step-security/vitest-coverage-report-action/issues"
@@ -33,6 +37,7 @@
     "common-tags": "1.8.2"
   },
   "devDependencies": {
+    "@biomejs/biome": "1.8.3",
     "@types/common-tags": "1.8.4",
     "@types/node": "20.14.8",
     "@vitest/coverage-v8": "3.0.7",
