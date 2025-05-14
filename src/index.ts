@@ -1,6 +1,7 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { RequestError } from "@octokit/request-error";
+import axios, { isAxiosError } from "axios";
 import { FileCoverageMode } from "./inputs/FileCoverageMode.js";
 import { getPullChanges } from "./inputs/getPullChanges.js";
 import { readOptions } from "./inputs/options.js";
@@ -13,27 +14,26 @@ import { generateHeadline } from "./report/generateHeadline.js";
 import { generateSummaryTableHtml } from "./report/generateSummaryTableHtml.js";
 import type { JsonSummary } from "./types/JsonSummary.js";
 import { writeSummaryToPR } from "./writeSummaryToPR.js";
-import axios, {isAxiosError} from 'axios';
 
 async function validateSubscription(): Promise<void> {
-	const API_URL = `https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/subscription`
-  
+	const API_URL = `https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/subscription`;
+
 	try {
-	  await axios.get(API_URL, {timeout: 3000})
+		await axios.get(API_URL, { timeout: 3000 });
 	} catch (error) {
-	  if (isAxiosError(error) && error.response) {
-		core.error(
-		  'Subscription is not valid. Reach out to support@stepsecurity.io'
-		)
-		process.exit(1)
-	  } else {
-		core.info('Timeout or API not reachable. Continuing to next step.')
-	  }
+		if (isAxiosError(error) && error.response) {
+			core.error(
+				"Subscription is not valid. Reach out to support@stepsecurity.io",
+			);
+			process.exit(1);
+		} else {
+			core.info("Timeout or API not reachable. Continuing to next step.");
+		}
 	}
-  }
+}
 
 const run = async () => {
-	await validateSubscription()
+	await validateSubscription();
 
 	const {
 		fileCoverageMode,
