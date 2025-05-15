@@ -1,10 +1,16 @@
-import { beforeEach, describe, expect, it, vi, Mock } from "vitest";
+import { Mock, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Octokit } from "../octokit";
 import { FileCoverageMode } from "./FileCoverageMode";
 import { getPullChanges } from "./getPullChanges";
-import type { Octokit } from "../octokit";
 
-// Avoid logs
-vi.mock("@actions/core");
+const mockGetInput = vi.hoisted(() => vi.fn());
+vi.mock("@actions/core", () => ({
+	getInput: mockGetInput,
+	endGroup: vi.fn(),
+	startGroup: vi.fn(),
+	info: vi.fn(),
+	debug: vi.fn(),
+}));
 
 const mockContext = vi.hoisted(() => ({
 	repo: {
