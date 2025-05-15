@@ -1,16 +1,9 @@
-import { beforeEach, describe, expect, it, vi, Mock } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FileCoverageMode } from "./FileCoverageMode";
 import { getPullChanges } from "./getPullChanges";
-import type { Octokit } from "../octokit";
 
-const mockGetInput = vi.hoisted(() => vi.fn());
-vi.mock("@actions/core", () => ({
-	getInput: mockGetInput,
-	endGroup: vi.fn(),
-	startGroup: vi.fn(),
-	info: vi.fn(),
-	debug: vi.fn(),
-}));
+// Avoid logs
+vi.mock("@actions/core");
 
 const mockContext = vi.hoisted(() => ({
 	repo: {
@@ -19,15 +12,17 @@ const mockContext = vi.hoisted(() => ({
 	},
 	payload: {},
 }));
+const mockGetOctokit = vi.hoisted(() => vi.fn());
 vi.mock("@actions/github", () => ({
 	context: mockContext,
+	getOctokit: mockGetOctokit,
 }));
 
-describe("getPullChanges()", () => {
-	let mockOctokit: Octokit;
+describe("getPullChanges", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockOctokit = {
+		mockGetInput.mockReturnValue("fake-token");
+		const mockOctokit = {
 			paginate: {
 				iterator: vi.fn().mockReturnValue([
 					{
@@ -43,32 +38,38 @@ describe("getPullChanges()", () => {
 					listFiles: vi.fn(),
 				},
 			},
-		} as unknown as Octokit;
+		};
+		mockGetOctokit.mockReturnValue(mockOctokit);
 	});
 
-	it("returns an empty array if fileCoverageMode is None", async () => {
+	it("should return an empty array if fileCoverageMode is None", async () => {
 		const result = await getPullChanges({
 			fileCoverageMode: FileCoverageMode.None,
-			octokit: mockOctokit,
 		});
 		expect(result).toEqual([]);
 	});
 
-	it("returns an empty array if prNumber is not provided", async () => {
+	it("should return an empty array if prNumber is not provided and context payload has no pull request number", async () => {
 		mockContext.payload = {};
 		const result = await getPullChanges({
 			fileCoverageMode: FileCoverageMode.All,
-			octokit: mockOctokit,
 		});
 		expect(result).toEqual([]);
 	});
 
-	it("fetches and returns the changed files when prNumber is provided", async () => {
+	it("should fetch and return changed files when prNumber is provided but not in the context", async () => {
 		mockContext.payload = {};
 		const result = await getPullChanges({
-			fileCoverageMode: FileCoverageMode.Changes,
+			fileCoverageMode: FileCoverageMode.All,
 			prNumber: 123,
-			octokit: mockOctokit,
+		});
+		expect(result).toEqual(["file1.ts", "file2.ts"]);
+	});
+
+	it("should fetch and return changed files when prNumber is in the context but not provided", async () => {
+		mockContext.payload = { pull_request: { number: 123 } };
+		const result = await getPullChanges({
+			fileCoverageMode: FileCoverageMode.All,
 		});
 		expect(result).toEqual(["file1.ts", "file2.ts"]);
 	});
