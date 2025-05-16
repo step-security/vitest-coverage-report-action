@@ -1,10 +1,29 @@
 import * as path from "node:path";
+import { report } from "node:process";
 import * as core from "@actions/core";
-import { getCoverageModeFrom } from "./FileCoverageMode";
+import type { Octokit } from "../octokit";
+import type { Thresholds } from "../types/Threshold";
+import { type FileCoverageMode, getCoverageModeFrom } from "./FileCoverageMode";
+import { type CommentOn, getCommentOn } from "./getCommentOn";
+import { getCommitSHA } from "./getCommitSHA";
+import { getPullRequestNumber } from "./getPullRequestNumber";
 import { getViteConfigPath } from "./getViteConfigPath";
 import { parseCoverageThresholds } from "./parseCoverageThresholds";
 
-async function readOptions() {
+type Options = {
+	fileCoverageMode: FileCoverageMode;
+	jsonFinalPath: string;
+	jsonSummaryPath: string;
+	jsonSummaryComparePath: string | null;
+	name: string;
+	thresholds: Thresholds;
+	workingDirectory: string;
+	prNumber: number | undefined;
+	commitSHA: string;
+	commentOn: Array<CommentOn>;
+};
+
+async function readOptions(octokit: Octokit): Promise<Options> {
 	// Working directory can be used to modify all default/provided paths (for monorepos, etc)
 	const workingDirectory = core.getInput("working-directory");
 
@@ -15,6 +34,7 @@ async function readOptions() {
 		workingDirectory,
 		core.getInput("json-summary-path"),
 	);
+
 	const jsonFinalPath = path.resolve(
 		workingDirectory,
 		core.getInput("json-final-path"),
@@ -31,24 +51,25 @@ async function readOptions() {
 
 	const name = core.getInput("name");
 
-	// Get the user-defined pull-request number and perform input validation
-	const prNumber = core.getInput("pr-number");
-	let processedPrNumber: number | undefined = Number(prNumber);
-	if (!Number.isSafeInteger(processedPrNumber) || processedPrNumber <= 0) {
-		processedPrNumber = undefined;
-	}
-	if (processedPrNumber) {
-		core.info(`Received pull-request number: ${processedPrNumber}`);
-	}
+	const commentOn = getCommentOn();
 
 	// ViteConfig is optional, as it is only required for thresholds. If no vite config is provided, we will not include thresholds in the final report.
 	const viteConfigPath = await getViteConfigPath(
 		workingDirectory,
 		core.getInput("vite-config-path"),
 	);
+
 	const thresholds = viteConfigPath
 		? await parseCoverageThresholds(viteConfigPath)
 		: {};
+
+	const commitSHA = getCommitSHA();
+
+	let prNumber: number | undefined = undefined;
+	if (commentOn.includes("pr")) {
+		// Get the user-defined pull-request number and perform input validation
+		prNumber = await getPullRequestNumber(octokit);
+	}
 
 	return {
 		fileCoverageMode,
@@ -58,8 +79,12 @@ async function readOptions() {
 		name,
 		thresholds,
 		workingDirectory,
-		processedPrNumber,
+		prNumber,
+		commitSHA,
+		commentOn,
 	};
 }
 
 export { readOptions };
+
+export type { Options };

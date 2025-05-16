@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { RequestError } from "@octokit/request-error";
+import { Mock, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Octokit } from "../octokit";
 import { FileCoverageMode } from "./FileCoverageMode";
 import { getPullChanges } from "./getPullChanges";
 
@@ -18,17 +20,15 @@ const mockContext = vi.hoisted(() => ({
 	},
 	payload: {},
 }));
-const mockGetOctokit = vi.hoisted(() => vi.fn());
 vi.mock("@actions/github", () => ({
 	context: mockContext,
-	getOctokit: mockGetOctokit,
 }));
 
-describe("getPullChanges", () => {
+describe("getPullChanges()", () => {
+	let mockOctokit: Octokit;
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockGetInput.mockReturnValue("fake-token");
-		const mockOctokit = {
+		mockOctokit = {
 			paginate: {
 				iterator: vi.fn().mockReturnValue([
 					{
@@ -44,39 +44,84 @@ describe("getPullChanges", () => {
 					listFiles: vi.fn(),
 				},
 			},
-		};
-		mockGetOctokit.mockReturnValue(mockOctokit);
+		} as unknown as Octokit;
 	});
 
-	it("should return an empty array if fileCoverageMode is None", async () => {
+	it("returns an empty array if fileCoverageMode is None", async () => {
 		const result = await getPullChanges({
 			fileCoverageMode: FileCoverageMode.None,
+			octokit: mockOctokit,
 		});
 		expect(result).toEqual([]);
 	});
 
-	it("should return an empty array if prNumber is not provided and context payload has no pull request number", async () => {
+	it("returns an empty array if prNumber is not provided", async () => {
 		mockContext.payload = {};
 		const result = await getPullChanges({
 			fileCoverageMode: FileCoverageMode.All,
+			octokit: mockOctokit,
 		});
 		expect(result).toEqual([]);
 	});
 
-	it("should fetch and return changed files when prNumber is provided but not in the context", async () => {
+	it("fetches and returns the changed files when prNumber is provided", async () => {
 		mockContext.payload = {};
 		const result = await getPullChanges({
-			fileCoverageMode: FileCoverageMode.All,
+			fileCoverageMode: FileCoverageMode.Changes,
 			prNumber: 123,
+			octokit: mockOctokit,
 		});
 		expect(result).toEqual(["file1.ts", "file2.ts"]);
 	});
 
-	it("should fetch and return changed files when prNumber is in the context but not provided", async () => {
-		mockContext.payload = { pull_request: { number: 123 } };
+	it("handles RequestError with status 404 gracefully", async () => {
+		mockOctokit.paginate.iterator = vi
+			.fn()
+			.mockImplementation(async function* () {
+				throw new RequestError("Not Found", 404, {
+					request: { headers: {}, method: "GET", url: "" },
+				});
+			});
+
 		const result = await getPullChanges({
-			fileCoverageMode: FileCoverageMode.All,
+			fileCoverageMode: FileCoverageMode.Changes,
+			prNumber: 123,
+			octokit: mockOctokit,
 		});
-		expect(result).toEqual(["file1.ts", "file2.ts"]);
+
+		expect(result).toEqual([]);
+	});
+
+	it("handles RequestError with status 403 gracefully", async () => {
+		mockOctokit.paginate.iterator = vi
+			.fn()
+			.mockImplementation(async function* () {
+				throw new RequestError("Forbidden", 403, {
+					request: { headers: {}, method: "GET", url: "" },
+				});
+			});
+
+		const result = await getPullChanges({
+			fileCoverageMode: FileCoverageMode.Changes,
+			prNumber: 123,
+			octokit: mockOctokit,
+		});
+
+		expect(result).toEqual([]);
+	});
+
+	it("throws an error for other exceptions", async () => {
+		mockOctokit.paginate.iterator = vi
+			.fn()
+			.mockImplementation(async function* () {
+				throw new Error("Unexpected error");
+			});
+		await expect(
+			getPullChanges({
+				fileCoverageMode: FileCoverageMode.Changes,
+				prNumber: 123,
+				octokit: mockOctokit,
+			}),
+		).rejects.toThrow("Unexpected error");
 	});
 });
