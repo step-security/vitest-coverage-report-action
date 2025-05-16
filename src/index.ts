@@ -2,18 +2,25 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { RequestError } from "@octokit/request-error";
 import axios, { isAxiosError } from "axios";
+import { aw } from "vitest/dist/chunks/reporters.C_zwCd4j.js";
 import { FileCoverageMode } from "./inputs/FileCoverageMode.js";
 import { getPullChanges } from "./inputs/getPullChanges.js";
-import { readOptions } from "./inputs/options.js";
+import { type Options, readOptions } from "./inputs/options.js";
 import {
 	parseVitestJsonFinal,
 	parseVitestJsonSummary,
 } from "./inputs/parseJsonReports.js";
+import { type Octokit, createOctokit } from "./octokit.js";
+import { generateCommitSHAUrl } from "./report/generateCommitSHAUrl.js";
 import { generateFileCoverageHtml } from "./report/generateFileCoverageHtml.js";
 import { generateHeadline } from "./report/generateHeadline.js";
 import { generateSummaryTableHtml } from "./report/generateSummaryTableHtml.js";
 import type { JsonSummary } from "./types/JsonSummary.js";
+import { writeSummaryToCommit } from "./writeSummaryToComment.js";
 import { writeSummaryToPR } from "./writeSummaryToPR.js";
+
+
+type GitHubSummary = typeof core.summary;
 
 async function validateSubscription(): Promise<void> {
 	const API_URL = `https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/subscription`;
@@ -35,57 +42,85 @@ async function validateSubscription(): Promise<void> {
 const run = async () => {
 	await validateSubscription();
 
-	const {
-		fileCoverageMode,
-		jsonFinalPath,
-		jsonSummaryPath,
-		jsonSummaryComparePath,
-		name,
-		thresholds,
-		workingDirectory,
-		processedPrNumber,
-	} = await readOptions();
+	const octokit = createOctokit();
 
-	const jsonSummary = await parseVitestJsonSummary(jsonSummaryPath);
+	const options = await readOptions(octokit);
+	core.info(`Using options: ${JSON.stringify(options, null, 2)}`);
+
+	const jsonSummary = await parseVitestJsonSummary(options.jsonSummaryPath);
 
 	let jsonSummaryCompare: JsonSummary | undefined;
-	if (jsonSummaryComparePath) {
-		jsonSummaryCompare = await parseVitestJsonSummary(jsonSummaryComparePath);
+	if (options.jsonSummaryComparePath) {
+		jsonSummaryCompare = await parseVitestJsonSummary(
+			options.jsonSummaryComparePath,
+		);
 	}
 
-	const tableData = generateSummaryTableHtml(
-		jsonSummary.total,
-		thresholds,
-		jsonSummaryCompare?.total,
-	);
 	const summary = core.summary
-		.addHeading(generateHeadline({ workingDirectory, name }), 2)
-		.addRaw(tableData);
+		.addHeading(
+			generateHeadline({
+				workingDirectory: options.workingDirectory,
+				name: options.name,
+			}),
+			2,
+		)
+		.addRaw(
+			generateSummaryTableHtml(
+				jsonSummary.total,
+				options.thresholds,
+				jsonSummaryCompare?.total,
+			),
+		);
 
-	if (fileCoverageMode !== FileCoverageMode.None) {
+	if (options.fileCoverageMode !== FileCoverageMode.None) {
 		const pullChanges = await getPullChanges({
-			fileCoverageMode,
-			prNumber: processedPrNumber,
+			fileCoverageMode: options.fileCoverageMode,
+			prNumber: options.prNumber,
+			octokit,
 		});
-		const jsonFinal = await parseVitestJsonFinal(jsonFinalPath);
+
+		const jsonFinal = await parseVitestJsonFinal(options.jsonFinalPath);
 		const fileTable = generateFileCoverageHtml({
 			jsonSummary,
 			jsonFinal,
-			fileCoverageMode,
+			fileCoverageMode: options.fileCoverageMode,
 			pullChanges,
+			commitSHA: options.commitSHA,
 		});
 		summary.addDetails("File Coverage", fileTable);
 	}
 
+	const commitSHAUrl = generateCommitSHAUrl(options.commitSHA);
+
 	summary.addRaw(
-		`<em>Generated in workflow <a href=${getWorkflowSummaryURL()}>#${github.context.runNumber}</a></em>`,
+		`<em>Generated in workflow <a href=${getWorkflowSummaryURL()}>#${github.context.runNumber}</a> for commit <a href="${commitSHAUrl}">${options.commitSHA.substring(0, 7)}</a> by the <a href="https://github.com/davelosert/vitest-coverage-report-action">Vitest Coverage Report Action</a></em>`,
 	);
 
+	if (options.commentOn.includes("pr")) {
+		await commentOnPR(octokit, summary, options);
+	}
+
+	if (options.commentOn.includes("commit")) {
+		await commentOnCommit(octokit, summary, options);
+	}
+
+	await summary.write();
+};
+
+async function commentOnPR(
+	octokit: Octokit,
+	summary: GitHubSummary,
+	options: Options,
+) {
 	try {
 		await writeSummaryToPR({
+			octokit,
 			summary,
-			markerPostfix: getMarkerPostfix({ name, workingDirectory }),
-			userDefinedPrNumber: processedPrNumber,
+			markerPostfix: getMarkerPostfix({
+				name: options.name,
+				workingDirectory: options.workingDirectory,
+			}),
+			prNumber: options.prNumber,
 		});
 	} catch (error) {
 		if (
@@ -93,18 +128,40 @@ const run = async () => {
 			(error.status === 404 || error.status === 403)
 		) {
 			core.warning(
-				`Couldn't write a comment to the pull-request. Please make sure your job has the permission 'pull-request: write'.
-				 Original Error was: [${error.name}] - ${error.message}
-				`,
+				`Couldn't write a comment to the pull request. Please make sure your job has the permission 'pull-request: write'.
+                 Original Error was: [${error.name}] - ${error.message}`,
 			);
 		} else {
-			// Rethrow to handle it in the catch block of the run()-call.
 			throw error;
 		}
 	}
+}
 
-	await summary.write();
-};
+async function commentOnCommit(
+	octokit: Octokit,
+	summary: GitHubSummary,
+	options: Options,
+) {
+	try {
+		await writeSummaryToCommit({
+			octokit,
+			summary,
+			commitSha: options.commitSHA,
+		});
+	} catch (error) {
+		if (
+			error instanceof RequestError &&
+			(error.status === 404 || error.status === 403)
+		) {
+			core.warning(
+				`Couldn't write a comment to the commit. Please make sure your job has the permission 'contents: read'.
+                 Original Error was: [${error.name}] - ${error.message}`,
+			);
+		} else {
+			throw error;
+		}
+	}
+}
 
 function getMarkerPostfix({
 	name,
