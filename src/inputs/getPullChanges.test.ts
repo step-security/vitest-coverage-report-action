@@ -4,14 +4,8 @@ import { RequestError } from "@octokit/request-error";
 import { FileCoverageMode } from "./FileCoverageMode";
 import { getPullChanges } from "./getPullChanges";
 
-const mockGetInput = vi.hoisted(() => vi.fn());
-vi.mock("@actions/core", () => ({
-	getInput: mockGetInput,
-	endGroup: vi.fn(),
-	startGroup: vi.fn(),
-	info: vi.fn(),
-	debug: vi.fn(),
-}));
+// Avoid logs
+vi.mock("@actions/core");
 
 const mockContext = vi.hoisted(() => ({
 	repo: {
