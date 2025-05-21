@@ -86,6 +86,7 @@ const run = async () => {
 			fileCoverageMode: options.fileCoverageMode,
 			pullChanges,
 			commitSHA: options.commitSHA,
+			workspacePath: options.fileCoverageRootPath,
 		});
 		summary.addDetails("File Coverage", fileTable);
 	}
