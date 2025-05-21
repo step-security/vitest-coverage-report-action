@@ -2,7 +2,6 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { RequestError } from "@octokit/request-error";
 import axios, { isAxiosError } from "axios";
-import { aw } from "vitest/dist/chunks/reporters.C_zwCd4j.js";
 import { FileCoverageMode } from "./inputs/FileCoverageMode.js";
 import { getPullChanges } from "./inputs/getPullChanges.js";
 import { type Options, readOptions } from "./inputs/options.js";
@@ -82,6 +81,7 @@ const run = async () => {
 		const jsonFinal = await parseVitestJsonFinal(options.jsonFinalPath);
 		const fileTable = generateFileCoverageHtml({
 			jsonSummary,
+			jsonSummaryCompare,
 			jsonFinal,
 			fileCoverageMode: options.fileCoverageMode,
 			pullChanges,

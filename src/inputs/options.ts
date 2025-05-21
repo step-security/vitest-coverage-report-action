@@ -1,5 +1,4 @@
 import * as path from "node:path";
-import { report } from "node:process";
 import * as core from "@actions/core";
 import type { Octokit } from "../octokit";
 import type { Thresholds } from "../types/Threshold";
