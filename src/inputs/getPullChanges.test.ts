@@ -1,17 +1,11 @@
-import { RequestError } from "@octokit/request-error";
 import { Mock, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Octokit } from "../octokit";
+import { RequestError } from "@octokit/request-error";
 import { FileCoverageMode } from "./FileCoverageMode";
 import { getPullChanges } from "./getPullChanges";
 
-const mockGetInput = vi.hoisted(() => vi.fn());
-vi.mock("@actions/core", () => ({
-	getInput: mockGetInput,
-	endGroup: vi.fn(),
-	startGroup: vi.fn(),
-	info: vi.fn(),
-	debug: vi.fn(),
-}));
+// Avoid logs
+vi.mock("@actions/core");
 
 const mockContext = vi.hoisted(() => ({
 	repo: {
@@ -74,54 +68,48 @@ describe("getPullChanges()", () => {
 		expect(result).toEqual(["file1.ts", "file2.ts"]);
 	});
 
-	it("handles RequestError with status 404 gracefully", async () => {
-		mockOctokit.paginate.iterator = vi
-			.fn()
-			.mockImplementation(async function* () {
+		it("handles RequestError with status 404 gracefully", async () => {
+			mockOctokit.paginate.iterator = vi.fn().mockImplementation(async function* () {
 				throw new RequestError("Not Found", 404, {
 					request: { headers: {}, method: "GET", url: "" },
 				});
 			});
-
-		const result = await getPullChanges({
-			fileCoverageMode: FileCoverageMode.Changes,
-			prNumber: 123,
-			octokit: mockOctokit,
+		
+			const result = await getPullChanges({
+				fileCoverageMode: FileCoverageMode.Changes,
+				prNumber: 123,
+				octokit: mockOctokit,
+			});
+		
+			expect(result).toEqual([]);
 		});
 
-		expect(result).toEqual([]);
-	});
-
-	it("handles RequestError with status 403 gracefully", async () => {
-		mockOctokit.paginate.iterator = vi
-			.fn()
-			.mockImplementation(async function* () {
+		it("handles RequestError with status 403 gracefully", async () => {
+			mockOctokit.paginate.iterator = vi.fn().mockImplementation(async function* () {
 				throw new RequestError("Forbidden", 403, {
 					request: { headers: {}, method: "GET", url: "" },
 				});
 			});
-
-		const result = await getPullChanges({
-			fileCoverageMode: FileCoverageMode.Changes,
-			prNumber: 123,
-			octokit: mockOctokit,
-		});
-
-		expect(result).toEqual([]);
-	});
-
-	it("throws an error for other exceptions", async () => {
-		mockOctokit.paginate.iterator = vi
-			.fn()
-			.mockImplementation(async function* () {
-				throw new Error("Unexpected error");
-			});
-		await expect(
-			getPullChanges({
+		
+			const result = await getPullChanges({
 				fileCoverageMode: FileCoverageMode.Changes,
 				prNumber: 123,
 				octokit: mockOctokit,
-			}),
-		).rejects.toThrow("Unexpected error");
-	});
+			});
+		
+			expect(result).toEqual([]);
+		});
+
+		it("throws an error for other exceptions", async () => {
+			mockOctokit.paginate.iterator = vi.fn().mockImplementation(async function* () {
+				throw new Error("Unexpected error");
+			});
+			await expect(
+				getPullChanges({
+					fileCoverageMode: FileCoverageMode.Changes,
+					prNumber: 123,
+					octokit: mockOctokit,
+				}),
+			).rejects.toThrow("Unexpected error");
+		});
 });
