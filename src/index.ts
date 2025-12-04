@@ -69,6 +69,7 @@ const run = async () => {
 				options.thresholds,
 				jsonSummaryCompare?.total,
 				options.thresholdIcons,
+				options.comparisonDecimalPlaces,
 			),
 		);
 
@@ -88,6 +89,7 @@ const run = async () => {
 			pullChanges,
 			commitSHA: options.commitSHA,
 			workspacePath: options.fileCoverageRootPath,
+			comparisonDecimalPlaces: options.comparisonDecimalPlaces,
 		});
 		summary.addDetails("File Coverage", fileTable);
 	}
