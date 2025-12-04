@@ -108,6 +108,29 @@ const run = async () => {
 	await summary.write();
 };
 
+function handleError(error: any, kind: string, permission: string) {
+	if (
+		error instanceof RequestError
+	) {
+		switch (error.status) {
+			case 403:
+			case 404:
+				core.warning(
+					`Couldn't write a comment to the ${kind}. Please make sure your job has the permission '${permission}: write'.\n` +
+					`Original Error was: [${error.name}] - ${error.message}`,
+				);
+				return;
+			case 422:
+				core.warning(
+					`Couldn't write a comment to the ${kind}. Summary was probably too large - See the step summary ${getWorkflowSummaryURL()} instead.\n` +
+					`Original Error was: [${error.name}] - ${error.message}`,
+				);
+				return;
+		}
+	}
+	throw error;
+}
+
 async function commentOnPR(
 	octokit: Octokit,
 	summary: GitHubSummary,
@@ -124,17 +147,7 @@ async function commentOnPR(
 			prNumber: options.prNumber,
 		});
 	} catch (error) {
-		if (
-			error instanceof RequestError &&
-			(error.status === 404 || error.status === 403)
-		) {
-			core.warning(
-				`Couldn't write a comment to the pull request. Please make sure your job has the permission 'pull-requests: write'.
-                 Original Error was: [${error.name}] - ${error.message}`,
-			);
-		} else {
-			throw error;
-		}
+		handleError(error, "pull request", "pull-requests");
 	}
 }
 
@@ -150,17 +163,7 @@ async function commentOnCommit(
 			commitSha: options.commitSHA,
 		});
 	} catch (error) {
-		if (
-			error instanceof RequestError &&
-			(error.status === 404 || error.status === 403)
-		) {
-			core.warning(
-				`Couldn't write a comment to the commit. Please make sure your job has the permission 'contents: read'.
-                 Original Error was: [${error.name}] - ${error.message}`,
-			);
-		} else {
-			throw error;
-		}
+		handleError(error, "commit", "contents");
 	}
 }
 
