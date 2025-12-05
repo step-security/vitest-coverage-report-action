@@ -18,7 +18,6 @@ import type { JsonSummary } from "./types/JsonSummary.js";
 import { writeSummaryToCommit } from "./writeSummaryToComment.js";
 import { writeSummaryToPR } from "./writeSummaryToPR.js";
 
-
 type GitHubSummary = typeof core.summary;
 
 async function validateSubscription(): Promise<void> {
