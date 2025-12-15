@@ -50,9 +50,9 @@ jobs:
       pull-requests: write
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: 'Install Node'
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: '20.x'
     - name: 'Install Deps'
@@ -75,25 +75,43 @@ This action requires the `pull-requests: write` permission to add a comment to y
 
 ### Options
 
-| Option                      | Description                                                                                                                                                                                                                                                      | Default                                                                                                                                                                                                                                                            |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `working-directory`         | The main path to search for coverage- and configuration files (adjusting this is especially useful in monorepos).                                                                                                                                                | `./`                                                                                                                                                                                                                                                               |
-| `json-summary-path`         | The path to the json summary file.                                                                                                                                                                                                                               | `${working-directory}/coverage/coverage-summary.json`                                                                                                                                                                                                              |
-| `json-final-path`           | The path to the json final file.                                                                                                                                                                                                                                 | `${working-directory}/coverage/coverage-final.json`                                                                                                                                                                                                                |
-| `json-summary-compare-path` | The path to the json summary file to compare against. If given, will display a trend indicator and the difference in the summary. Respects the `working-directory` option.                                                                                       | undefined                                                                                                                                                                                                                                                          |
-| `vite-config-path`          | The path to the vite config file. Will check the same paths as vite and vitest                                                                                                                                                                                   | Checks pattern `${working-directory}/vite[st].config.{t\|mt\|ct\|j\|mj\|cj}s`                                                                                                                   |
-| `github-token`              | A GitHub access token with permissions to write to issues (defaults to `secrets.GITHUB_TOKEN`).                                                                                                                                                                  | `${{ github.token }}`                                                                                                                                                                                                                                              |
-| `file-coverage-mode`        | Defines how file-based coverage is reported. Possible values are `all`, `changes` or `none`.                                                                                                                                                                     | `changes`                                                                                                                                                                                                                                                          |
+| Option                      | Description                                                                                                                                                                                                                                                                                                                       | Default                                                                                                                                                                                                                                                            |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `working-directory`         | The main path to search for coverage- and configuration files (adjusting this is especially useful in monorepos).                                                                                                                                                                                                                 | `./`                                                                                                                                                                                                                                                               |
+| `json-summary-path`         | The path to the json summary file.                                                                                                                                                                                                                                                                                                | `${working-directory}/coverage/coverage-summary.json`                                                                                                                                                                                                              |
+| `json-final-path`           | The path to the json final file.                                                                                                                                                                                                                                                                                                  | `${working-directory}/coverage/coverage-final.json`                                                                                                                                                                                                                |
+| `json-summary-compare-path` | The path to the json summary file to compare against. If given, will display a trend indicator and the difference in the summary. Respects the `working-directory` option.                                                                                                                                                        | undefined                                                                                                                                                                                                                                                          |
+| `vite-config-path`          | The path to the vite config file. Will check the same paths as vite and vitest                                                                                                                                                                                                                                                    | Checks pattern `${working-directory}/vite[st].config.{t\|mt\|ct\|j\|mj\|cj}s`                                                                                                                                                                                      |
+| `github-token`              | A GitHub access token with permissions to write to issues (defaults to `secrets.GITHUB_TOKEN`).                                                                                                                                                                                                                                   | `${{ github.token }}`                                                                                                                                                                                                                                              |
+| `file-coverage-mode`        | Defines how file-based coverage is reported. Possible values are `none`, `changes`, `changes-affected`, or `all`. See [File Coverage Mode](#file-coverage-mode) section below for detailed explanations.                                                                                                                          | `changes`                                                                                                                                                                                                                                                          |
 | `file-coverage-root-path`   | The root (or absolute) part of the path used within the json coverage reports to point to the covered files. You can change this if your reports were generated in a different context (e.g., a docker container) and the absolute paths don't match the current runner's workspace. Uses the runner's workspace path by default. | `${{ github.workspace }}`                                                                                                                                                                                                                                          |
-| `name`                      | Give the report a custom name. This is useful if you want multiple reports for different test suites within the same PR. Needs to be unique.                                                                                                                     | ''                                                                                                                                                                                                                                                                 |
-| `pr-number`                 | The number of the PR to post a comment to. When using the `push` trigger, you can set this option to "auto" to make the action automaticaly search of a PR with a matching `sha` value and comment on it.                                                                                                                                                                                                              | If in the context of a PR, the number of that PR.<br/> If in the context of a triggered workflow, the PR of the triggering workflow.                                                                    <br/>If no PR context is found, it defaults to `undefined` |
-| `comment-on`                | Specify where you want a comment to appear: "pr" for pull-request (if one can be found), "commit" for the commit in which context the action was run, or "none" for no comments. You can provide a comma-separated list of "pr" and "commit" to comment on both. | `pr`                                                                                                                                                                                                                                                               |
+| `comparison-decimal-places` | Number of decimal places to show in coverage comparison percentages. Useful for large projects where small percentage changes can represent significant coverage differences.                                                                                                                                                     | `2`                                                                                                                                                                                                                                                                |
+| `name`                      | Give the report a custom name. This is useful if you want multiple reports for different test suites within the same PR. Needs to be unique.                                                                                                                                                                                      | ''                                                                                                                                                                                                                                                                 |
+| `pr-number`                 | The number of the PR to post a comment to. When using the `push` trigger, you can set this option to "auto" to make the action automatically search of a PR with a matching `sha` value and comment on it.                                                                                                                        | If in the context of a PR, the number of that PR.<br/> If in the context of a triggered workflow, the PR of the triggering workflow.                                                                    <br/>If no PR context is found, it defaults to `undefined` |
+| `comment-on`                | Specify where you want a comment to appear: "pr" for pull-request (if one can be found), "commit" for the commit in which context the action was run, or "none" for no comments. You can provide a comma-separated list of "pr" and "commit" to comment on both.                                                                  | `pr`                                                                                                                                                                                                                                                               |
 
 #### File Coverage Mode
 
-- `changes` - show Files coverage only for project files changed in that pull request (works only with `pull_request`, `pull_request_review`, `pull_request_review_comment` actions)
-- `all` - show it grouped by changed and not changed files in that pull request (works only with `pull_request`, `pull_request_review`, `pull_request_review_comment` actions)
-- `none` - do not show any File coverage details (only total Summary)
+The `file-coverage-mode` option controls which files are included in the detailed coverage report and how they are organized:
+
+- **`none`** - Don't show any file-level coverage details. Only the overall summary statistics are displayed.
+
+- **`changes`** (default) - Show coverage only for files that were changed in the pull request. This provides a focused view of how your changes affect coverage. If `json-summary-compare-path` is provided, comparison deltas will also be displayed.
+
+- **`changes-affected`** - Show coverage for:
+  - **Changed Files**: Files that were modified in the pull request
+  - **Affected Files**: Files that weren't changed but have different coverage metrics compared to the base branch
+  
+  This mode helps you identify when your changes impact coverage in other parts of the codebase. Requires comparison data from `json-summary-compare-path`.
+
+- **`all`** - Show coverage for all files in the project, organized into three groups:
+  - **Changed Files**: Files that were modified in the pull request
+  - **Affected Files**: Unchanged files with different coverage metrics
+  - **Unchanged Files**: Unchanged files with the same coverage metrics
+  
+  This provides the most complete view of your project's coverage. When comparison data is available via `json-summary-compare-path`, files are categorized by their coverage changes.
+
+> **Note:** The `changes`, `changes-affected`, and `all` modes work with `pull_request`, `pull_request_review`, and `pull_request_review_comment` events. They require `json-summary-compare-path` to be set for optimal functionality.
 
 #### Name
 
@@ -117,10 +135,35 @@ If your project includes multiple test suites and you want to consolidate their 
         json-final-path: './coverage/coverage-final-backend.json'
 ```
 
+#### Threshold Icons
+
+If you haven't established strict coverage thresholds in your `vitest.config` (which would fail the test run), you can still use the `threshold-icons` option to control the status icons displayed in the PR comment based on coverage percentage.
+
+This is useful when you want visual feedback on coverage levels without enforcing them as pass/fail criteria.
+
+The format is a JSON object where keys are coverage percentage thresholds and values are the icons to display. The icon for the highest threshold not exceeding the coverage percentage is used.
+
+```yml
+## ...
+    - name: 'Report Coverage'
+      uses:  davelosert/vitest-coverage-report-action@v2
+      with:
+        threshold-icons: "{0: '🔴', 80: '🟠', 90: '🟢'}"
+```
+
+With this configuration:
+
+- Coverage 0-79% will show 🔴
+- Coverage 80-89% will show 🟠
+- Coverage 90-100% will show 🟢
+
+> [!NOTE]
+> When both vitest coverage threshold and `threshold-icons` are defined, `threshold-icons` determines the status icon displayed, while the vitest threshold is shown as a target percentage.
+
 ### Coverage Thresholds
 
 > [!WARNING]
-> Currently, this action does not import the vite-configuration, but parses it as string to extract the coverage-thresholds by an regexp. In other words: All thresholds need to be directly defined in the config-file given to this action through the vite-config-path input. E.g., when using workspace to extend a parent-configuration, the thresholds can not be defined in the parent-config.
+> Currently, this action does not import the vite-configuration, but parses it as string to extract the coverage-thresholds by a regexp. In other words: All thresholds need to be directly defined in the config-file given to this action through the vite-config-path input. E.g., when using workspace to extend a parent-configuration, the thresholds cannot be defined in the parent-config.
 
 This action reads the coverage thresholds specified in the `coverage` property of the Vite configuration file. It then uses these thresholds to determine the status of the generated report.
 
@@ -147,7 +190,7 @@ With the above configuration, the report would appear as follows:
 
 ![Coverage Threshold Report](./docs/coverage-report-threshold.png)
 
-If no thresholds are defined, the status will display as '🔵'.
+If no thresholds are defined, the status will display as '🔵' by default. You can customize this behavior using the [`threshold-icons`](#threshold-icons) option.
 
 ### Coverage Trend Indicator
 
@@ -178,13 +221,13 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ matrix.branch }}
           ## Set repository to correctly checkout from forks
           repository: ${{ github.event.pull_request.head.repo.full_name }}
       - name: "Install Node"
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20.x"
       - name: "Install Deps"
@@ -192,7 +235,7 @@ jobs:
       - name: "Test"
         run: npx vitest --coverage.enabled true
       - name: "Upload Coverage"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-${{ matrix.artifact }}
           path: coverage
@@ -201,12 +244,14 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
+        ## Check out the repository to obtain the vitest.config file
+      - uses: actions/checkout@v5
       - name: "Download Coverage Artifacts"
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: coverage-pull-request
           path: coverage
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           name: coverage-main
           path: coverage-main
@@ -281,9 +326,9 @@ It will then automatically locate the appropriate pull request to comment on.
           contents: read
 
         steps:
-          - uses: actions/checkout@v4
+          - uses: actions/checkout@v5
           - name: "Install Node"
-            uses: actions/setup-node@v4
+            uses: actions/setup-node@v6
             with:
               node-version: "20.x"
           - name: "Install Deps"
@@ -292,7 +337,7 @@ It will then automatically locate the appropriate pull request to comment on.
             run: npx vitest --coverage.enabled true
 
           - name: "Upload Coverage"
-            uses: actions/upload-artifact@v4
+            uses: actions/upload-artifact@v5
             with:
               name: coverage
               path: coverage
@@ -317,8 +362,8 @@ It will then automatically locate the appropriate pull request to comment on.
           pull-requests: write
 
         steps:
-          - uses: actions/checkout@v4
-          - uses: actions/download-artifact@v4
+          - uses: actions/checkout@v5
+          - uses: actions/download-artifact@v6
             with:
               github-token: ${{ secrets.GITHUB_TOKEN }}
               run-id: ${{ github.event.workflow_run.id }}
@@ -328,6 +373,9 @@ It will then automatically locate the appropriate pull request to comment on.
 
 > [!NOTE]
 > This configuration also works for pull requests originating from your own repository (not forks), so it can be used generally.
+
+> [!NOTE]
+> If you see an error like: `Error: Unable to download artifact(s): Resource not accessible by integration` you may need to add the `actions: read` permission to the `coverage.yml` reporting action.
 
 #### Limitations & Considerations
 

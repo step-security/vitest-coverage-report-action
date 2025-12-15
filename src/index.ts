@@ -9,7 +9,7 @@ import {
 	parseVitestJsonFinal,
 	parseVitestJsonSummary,
 } from "./inputs/parseJsonReports.js";
-import { type Octokit, createOctokit } from "./octokit.js";
+import { createOctokit, type Octokit } from "./octokit.js";
 import { generateCommitSHAUrl } from "./report/generateCommitSHAUrl.js";
 import { generateFileCoverageHtml } from "./report/generateFileCoverageHtml.js";
 import { generateHeadline } from "./report/generateHeadline.js";
@@ -17,7 +17,6 @@ import { generateSummaryTableHtml } from "./report/generateSummaryTableHtml.js";
 import type { JsonSummary } from "./types/JsonSummary.js";
 import { writeSummaryToCommit } from "./writeSummaryToComment.js";
 import { writeSummaryToPR } from "./writeSummaryToPR.js";
-
 
 type GitHubSummary = typeof core.summary;
 
@@ -68,6 +67,8 @@ const run = async () => {
 				jsonSummary.total,
 				options.thresholds,
 				jsonSummaryCompare?.total,
+				options.thresholdIcons,
+				options.comparisonDecimalPlaces,
 			),
 		);
 
@@ -87,6 +88,7 @@ const run = async () => {
 			pullChanges,
 			commitSHA: options.commitSHA,
 			workspacePath: options.fileCoverageRootPath,
+			comparisonDecimalPlaces: options.comparisonDecimalPlaces,
 		});
 		summary.addDetails("File Coverage", fileTable);
 	}
@@ -108,6 +110,27 @@ const run = async () => {
 	await summary.write();
 };
 
+function handleError(error: unknown, kind: string, permission: string) {
+	if (error instanceof RequestError) {
+		switch (error.status) {
+			case 403:
+			case 404:
+				core.warning(
+					`Couldn't write a comment to the ${kind}. Please make sure your job has the permission '${permission}: write'.\n` +
+						`Original Error was: [${error.name}] - ${error.message}`,
+				);
+				return;
+			case 422:
+				core.warning(
+					`Couldn't write a comment to the ${kind}. Summary was probably too large - See the step summary ${getWorkflowSummaryURL()} instead.\n` +
+						`Original Error was: [${error.name}] - ${error.message}`,
+				);
+				return;
+		}
+	}
+	throw error;
+}
+
 async function commentOnPR(
 	octokit: Octokit,
 	summary: GitHubSummary,
@@ -124,17 +147,7 @@ async function commentOnPR(
 			prNumber: options.prNumber,
 		});
 	} catch (error) {
-		if (
-			error instanceof RequestError &&
-			(error.status === 404 || error.status === 403)
-		) {
-			core.warning(
-				`Couldn't write a comment to the pull request. Please make sure your job has the permission 'pull-requests: write'.
-                 Original Error was: [${error.name}] - ${error.message}`,
-			);
-		} else {
-			throw error;
-		}
+		handleError(error, "pull request", "pull-requests");
 	}
 }
 
@@ -150,24 +163,17 @@ async function commentOnCommit(
 			commitSha: options.commitSHA,
 		});
 	} catch (error) {
-		if (
-			error instanceof RequestError &&
-			(error.status === 404 || error.status === 403)
-		) {
-			core.warning(
-				`Couldn't write a comment to the commit. Please make sure your job has the permission 'contents: read'.
-                 Original Error was: [${error.name}] - ${error.message}`,
-			);
-		} else {
-			throw error;
-		}
+		handleError(error, "commit", "contents");
 	}
 }
 
 function getMarkerPostfix({
 	name,
 	workingDirectory,
-}: { name: string; workingDirectory: string }) {
+}: {
+	name: string;
+	workingDirectory: string;
+}) {
 	if (name) return name;
 	if (workingDirectory !== "./") return workingDirectory;
 	return "root";
