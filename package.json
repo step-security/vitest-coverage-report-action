@@ -43,7 +43,7 @@
     "@types/common-tags": "1.8.4",
     "@types/node": "25.7.0",
     "@vitest/coverage-v8": "4.1.6",
-    "axios": "^1.6.2",
+    "axios": "^1.18.0",
     "esbuild": "0.28.1",
     "semantic-release": "25.0.5",
     "semantic-release-github-actions-tags": "2.0.2",
