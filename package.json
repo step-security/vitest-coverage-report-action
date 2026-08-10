@@ -38,12 +38,12 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.2",
     "@types/common-tags": "1.8.4",
-    "@types/node": "26.1.1",
+    "@types/node": "26.1.2",
     "@vitest/coverage-v8": "4.1.10",
     "axios": "^1.16.0",
     "esbuild": "0.28.1",
     "typescript": "7.0.2",
-    "vite": "8.1.4",
+    "vite": "8.2.1",
     "vitest": "4.1.10"
   }
 }
