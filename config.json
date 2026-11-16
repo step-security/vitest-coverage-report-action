@@ -1,0 +1,17 @@
+{
+  "$comment": "Managed automatically when syncing with upstream. Do not edit by hand.",
+  "schema_version": 1,
+  "onboarding_type": "copied",
+  "action_type": "node",
+  "upstream": {
+    "repository": "davelosert/vitest-coverage-report-action",
+    "synced_tag": "v2.13.2",
+    "synced_commit": "74c2d9210b4fc44c84d8213f61d7ec99837b7aa0",
+    "archived": false
+  },
+  "build": {
+    "package_manager": "npm@11.20.0",
+    "node_version": "24",
+    "script": "build"
+  }
+}

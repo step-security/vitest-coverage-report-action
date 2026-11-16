@@ -1,5 +1,5 @@
 {
-  "name": "vitest-coverage-report-action",
+  "name": "@step-security/vitest-coverage-report-action",
   "version": "0.0.0",
   "description": "A GitHub Action to report the test coverage of vitest",
   "main": "src/index.js",
@@ -25,6 +25,7 @@
     "nyc"
   ],
   "author": "step-security",
+  "publisher": "step-security",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/step-security/vitest-coverage-report-action/issues"
@@ -33,17 +34,21 @@
   "dependencies": {
     "@actions/core": "3.0.1",
     "@actions/github": "9.1.1",
-    "common-tags": "1.8.2"
+    "common-tags": "1.8.2",
+    "axios": "^1.20.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.9",
+    "@biomejs/biome": "2.6.4",
     "@types/common-tags": "1.8.4",
-    "@types/node": "26.2.0",
-    "@vitest/coverage-v8": "4.1.11",
-    "axios": "^1.16.0",
+    "@types/node": "26.6.6",
+    "@vitest/coverage-v8": "5.0.5",
     "esbuild": "0.28.2",
     "typescript": "7.0.2",
-    "vite": "8.2.2",
-    "vitest": "4.1.11"
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  },
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
   }
 }

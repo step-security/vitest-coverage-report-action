@@ -1,4 +1,5 @@
 name: 'Vitest Coverage Report'
+author: step-security
 description: 'Provide a Vitest Test Coverage Report as Step-Summary and comment in Pull Requests'
 inputs:
   github-token:
